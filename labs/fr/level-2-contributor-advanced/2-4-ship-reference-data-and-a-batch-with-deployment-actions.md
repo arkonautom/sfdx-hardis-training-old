@@ -5,7 +5,7 @@ description: "Un déploiement vert n'est pas une fonctionnalité qui marche. Liv
 level: 2
 lab: 4
 lang: fr
-source_rev: "f6d43148b9aebd99be359ad671d3c904ecb6156d"
+source_rev: "01284af833e091e8a6965e7cd0a994f54be48fb3"
 screenshots:
   - annotated/vscode/sidebar-commands-custom-menu-2--lab-records
   - annotated/salesforce/crew-capacity-records
@@ -407,7 +407,10 @@ production est pire que pas d'étape du tout.
 
 1. Cliquez sur **Open Git** dans la notification du dernier **Save** : il ouvre **Source Control**,
    où le fichier d'actions attend
-2. Commitez-le, puis **Save / Publish**
+2. Avant de commiter, ramenez le commit que MegaLinter a probablement poussé entre-temps sur votre
+   branche, `chore(megalinter): apply linters fixes` : dans le menu **...** en haut de **Source
+   Control**, cliquez sur **Pull**
+3. Commitez le fichier d'actions, puis **Save / Publish**
 
 #### Pourquoi
 
@@ -420,6 +423,12 @@ suivi du chemin du fichier.
 Le contrôle de la Pull Request et le déploiement lisent les actions dans ce fichier, sur la branche
 de la Pull Request, et non dans le panneau : une action jamais poussée ne tourne pas, et rien
 n'échoue pour vous le dire.
+
+Le commit de MegaLinter est attendu sur cette Pull Request. Le **Data Workbench** écrit
+`export.json` sans ligne vide à la fin, le formateur JSON de MegaLinter l'ajoute, et pousse le
+résultat sur votre branche. GitHub ne lance pas les contrôles pour un commit poussé par son propre
+robot, si bien que ce commit affiche des contrôles en attente : le push de votre fichier d'actions
+les relance. Le **Pull** d'abord est ce qui laisse passer ce push.
 
 #### Vous devriez voir
 
@@ -609,6 +618,13 @@ mais rien n'empêche le merge non plus. Cliquez sur **Welcome page** > **Trainin
 **Update my course**, mergez la Pull Request qu'il ouvre, puis ramenez `integration` dans votre
 branche comme au [Lab 2.1](2-1-backpromote-your-teammates-work.md) et publiez : le check suivant s'arrête sur l'étape.
 
+**Le push est refusé, ou les contrôles attendent sur `chore(megalinter): apply linters fixes`.**
+MegaLinter a ajouté la dernière ligne manquante d'`export.json` et l'a poussée sur votre branche :
+GitHub a donc un commit que votre ordinateur n'a pas. Dans le menu **...** de **Source Control**,
+cliquez sur **Pull**, puis de nouveau **Save / Publish** : c'est votre push qui relance les
+contrôles, sans rien à approuver. Le même commit du robot figure dans le dépannage du
+[Lab 1.6](../level-1-contributor-basics/1-6-pull-request-deployment-check-and-merge.md).
+
 **Le fichier d'actions s'appelle `.sfdx-hardis.draft.yml`, ou le check s'arrête sur *Draft deployment actions file found*.**
 Vous avez ajouté l'action alors que le panneau ne connaissait aucune Pull Request pour votre
 branche : la carte **My Pull Request** indiquait *Pull Request not created yet*, et l'action a été
@@ -629,6 +645,14 @@ L'utilisateur de CI ne peut pas écrire les champs : l'autorisation de l'étape 
 `Helios_Delivery_Manager`, ou n'a jamais atteint le repository. Un déploiement n'accorde de lui-même
 aucune permission de champ à qui que ce soit. Ajoutez-les dans `helios-dev`, récupérez le permission
 set, et publiez à nouveau.
+
+**Create my lab records s'arrête sur `External_Id__c`, ou dit que les enregistrements n'ont pas pu être créés.**
+Les douze enregistrements sont rapprochés sur `External_Id__c` : ce champ a besoin de la case
+**External Id** de l'étape 1. Dans `helios-dev`, ouvrez le champ dans Setup, cliquez sur **Edit**,
+cochez **External Id**, enregistrez, et cliquez de nouveau sur **Create my lab records**. Récupérez
+ensuite le champ avec le Metadata Retriever, pour que votre branche porte aussi la case. Si la case
+était déjà cochée, lisez les lignes grises au-dessus du message : c'est l'erreur Salesforce, et un
+champ absent de l'autorisation **Helios Delivery Manager** de l'étape 1 est l'autre cause habituelle.
 
 **L'import crée des doublons à chaque exécution.**
 L'opération est `Insert` et non `Upsert`, ou l'identifiant externe n'est pas renseigné. Ouvrez le

@@ -8,15 +8,15 @@
  * - the pads at the bottom of the screen
  * - the level-complete animation with the Cloudity logo and the badge
  * - the Hall of Fame: the boards, and sending one's scores
- * - the bonus table: its card on the map, its teaser, its start and end cards
+ * - the bonuses (Pipeline Pinball, Org-Man): their cards on the map, their teaser, their start and end cards
  *
  * A world draws its own HTML in `layer`, between the 3D view and this HUD.
  * Buttons carry data-action, which input.js turns into actions; pads carry
  * data-pad and react on pointerdown.
  */
-import { WORLDS, MODES } from "./core/story.js";
+import { WORLDS, MODES, BONUSES } from "./core/story.js";
 import { SPECIAL_THANKS, CONTACT_URLS } from "./credits.js";
-import { avatarUrl, rankGeneral, rankOf, rankPinball, rankWorld } from "./core/hof.js";
+import { avatarUrl, rankBonus, rankGeneral, rankOf, rankWorld } from "./core/hof.js";
 
 /**
  * The guinea pig of the cards: a picture of the 3D model
@@ -217,12 +217,16 @@ export function createHud(t, options) {
   // The chat bubbles waiting for the oldest one on screen to be read
   const chatQueue = [];
 
+  /** who: a name of CAST, or a speaker outside it: { name, faceUrl, color }. */
   function showChat(who, text, life) {
-    const person = CAST[who] || CAST.you;
+    const person = typeof who === "object" && who ? who : CAST[who] || CAST.you;
     const bubble = element("div", "gr-bubble", chat);
-    const avatar = element("span", "gr-avatar", bubble, person.face ? "" : person.initials);
+    const avatar = element("span", "gr-avatar", bubble, person.face || person.faceUrl ? "" : person.initials);
     avatar.style.backgroundColor = person.color;
-    if (person.face) {
+    if (person.faceUrl) {
+      avatar.classList.add("gr-avatar--portrait");
+      avatar.style.backgroundImage = 'url("' + person.faceUrl + '")';
+    } else if (person.face) {
       avatar.classList.add("gr-avatar--" + who);
     }
     const content = element("div", "", bubble);
@@ -310,9 +314,18 @@ export function createHud(t, options) {
     const list = element("ul", "gr-keys", parent);
     const uses = { keysMove: ["left", "right"], keysJump: ["jump"], keysDuck: ["duck"], keysConfirm: ["confirm"] };
     const all = touch ? ["keysTouch", "keysMove", "keysJump", "keysConfirm"] : ["keysMove", "keysJump", "keysDuck", "keysConfirm", "keysOther"];
-    // The bonus table has flippers, a plunger and a nudge instead
+    // The bonus table has flippers, a plunger and a nudge instead; the maze four ways to go
     const flippers = Boolean(worldPads && worldPads.includes("flippers"));
-    const lines = flippers ? (touch ? ["keysFlipTouch"] : ["keysFlip", "keysPlunger", "keysOther"]) : all.filter((key) => !worldPads || !uses[key] || uses[key].some((pad) => worldPads.includes(pad)));
+    const maze = Boolean(worldPads && worldPads.includes("maze"));
+    const lines = flippers
+      ? touch
+        ? ["keysFlipTouch"]
+        : ["keysFlip", "keysPlunger", "keysOther"]
+      : maze
+        ? touch
+          ? ["keysMazeTouch"]
+          : ["keysMaze", "keysOther"]
+        : all.filter((key) => !worldPads || !uses[key] || uses[key].some((pad) => worldPads.includes(pad)));
     for (const key of lines) {
       element("li", "", list, t(key));
     }
@@ -365,10 +378,17 @@ export function createHud(t, options) {
 
   let hofDraft = null;
 
+  // The words of each bonus, by its id
+  const BONUS_TEXT = {
+    pinball: { name: "bonusName", style: "style_pinball", pitch: "bonusPitch", rule: "bonusRule", one: "bonusOneDifficulty", tab: "hofPinballTab", title: "hofPinballTitle", see: "hofSeeBonus", play: "teaserPlay", glyph: "★" },
+    orgman: { name: "orgName", style: "style_maze", pitch: "orgPitch", rule: "orgRule", one: "orgOneDifficulty", tab: "hofOrgmanTab", title: "hofOrgmanTitle", see: "hofSeeOrgman", play: "teaserPlayOrg", glyph: "◉" }
+  };
+  const bonusText = (id) => BONUS_TEXT[id] || BONUS_TEXT.pinball;
+
   function hofList(body, view) {
     const general = view.tab === "all";
-    const pinball = view.tab === "pinball";
-    const list = general ? rankGeneral(view.board) : pinball ? rankPinball(view.board) : rankWorld(view.board, view.tab);
+    const bonus = view.tab === "pinball" || view.tab === "orgman";
+    const list = general ? rankGeneral(view.board) : bonus ? rankBonus(view.board, view.tab) : rankWorld(view.board, view.tab);
     if (!list.length) {
       element("p", "gr-muted", body, view.ok ? t("hofEmpty") : t("hofOffline"));
       return;
@@ -390,8 +410,8 @@ export function createHud(t, options) {
         pill.title = BADGE_NAMES[p.badge];
         pill.setAttribute("aria-label", BADGE_NAMES[p.badge]);
       }
-      if (pinball) {
-        element("span", "gr-hof-stars", row, t("hofLevel", { n: p.level }));
+      if (bonus) {
+        element("span", "gr-hof-stars", row, t(view.tab === "orgman" ? "hofMaze" : "hofLevel", { n: p.level }));
         element("span", "gr-hof-score", row, number(p.score));
         return;
       }
@@ -417,22 +437,23 @@ export function createHud(t, options) {
     return Math.round(n).toLocaleString(options.lang === "fr" ? "fr-FR" : "en-US");
   }
 
-  /** The card of the bonus table on the map, under the worlds. */
+  /** The card of a bonus on the map, under the worlds. bonus: { id, best, hasSave }. */
   function bonusCard(body, bonus) {
+    const words = bonusText(bonus.id);
     const card = element("div", "gr-card gr-bonus-card", body);
-    card.setAttribute("data-world", "pinball");
+    card.setAttribute("data-world", bonus.id);
     const head = element("div", "gr-card-head", card);
-    element("span", "gr-card-number", head, "★");
+    element("span", "gr-card-number", head, words.glyph);
     const titles = element("div", "gr-card-titles", head);
-    element("strong", "", titles, t("bonusName"));
-    element("span", "gr-card-style", titles, t("style_pinball"));
-    element("p", "gr-card-pitch", card, t("bonusPitch"));
+    element("strong", "", titles, t(words.name));
+    element("span", "gr-card-style", titles, t(words.style));
+    element("p", "gr-card-pitch", card, t(words.pitch));
     const foot = element("div", "gr-card-foot", card);
     if (bonus.best > 0) {
       element("span", "gr-muted", foot, t("best") + ": " + number(bonus.best));
     }
-    const play = button(foot, "bonus", t("bonusName"), "gr-primary gr-small", bonus.hasSave ? t("bonusResume") : t("play"));
-    play.setAttribute("data-world", "pinball");
+    const play = button(foot, "bonus", t(words.name), "gr-primary gr-small", bonus.hasSave ? t("bonusResume") : t("play"));
+    play.setAttribute("data-world", bonus.id);
     return play;
   }
 
@@ -481,7 +502,7 @@ export function createHud(t, options) {
         return;
       }
       if (answer.error) {
-        message.textContent = t(answer.error);
+        message.textContent = t(answer.error, answer.params);
         return;
       }
       ready = { handle, count: answer.count };
@@ -518,6 +539,35 @@ export function createHud(t, options) {
     inviteBox.setAttribute("aria-live", "polite");
   }
 
+  /**
+   * On a phone, on the map and after a won world: add the game to the home
+   * screen, it then plays offline. install: null or { kind, url }; null leaves
+   * the box empty and hidden, so the map can fill it when the browser offers
+   * the install later.
+   */
+  function installBox(body, install, className) {
+    const box = element("div", "gr-rule gr-rule--info gr-install" + (className ? " " + className : ""), body);
+    box.setAttribute("aria-live", "polite");
+    fillInstall(box, install);
+  }
+
+  function fillInstall(box, install) {
+    box.textContent = "";
+    box.hidden = !install;
+    if (!install) {
+      return;
+    }
+    element("strong", "", box, t("installTitle"));
+    element("span", "", box, t("install_" + install.kind));
+    if (install.kind === "page") {
+      const link = element("a", "gr-button gr-small gr-install-link", box, t("installOpenPage"));
+      link.href = install.url;
+      link.setAttribute("data-action", "install-page");
+    } else if (install.kind === "prompt") {
+      button(box, "install", t("installButton"), "gr-small gr-install-link");
+    }
+  }
+
   /** Where the scores would rank: "#3 in Commit, #2 overall". */
   function inviteList(invites) {
     const parts = invites.map((i) =>
@@ -525,7 +575,9 @@ export function createHud(t, options) {
         ? t("hofInviteAll", { rank: i.rank })
         : i.board === "pinball"
           ? t("hofInvitePinball", { rank: i.rank })
-          : t("hofInviteWorld", { rank: i.rank, world: t("w" + i.board + "_name") })
+          : i.board === "orgman"
+            ? t("hofInviteOrgman", { rank: i.rank })
+            : t("hofInviteWorld", { rank: i.rank, world: t("w" + i.board + "_name") })
     );
     return parts.length > 1 ? parts.slice(0, -1).join(", ") + " " + t("hofAnd") + " " + parts[parts.length - 1] : parts[0];
   }
@@ -653,8 +705,10 @@ export function createHud(t, options) {
       // One more thing: the bonus table, open now
       const bonus = element("div", "gr-rule gr-rule--info gr-bonus-cta", body);
       element("strong", "", bonus, t("teaserTitle"));
-      element("span", "", bonus, t("bonusPitch"));
-      button(bonus, "bonus", t("teaserPlay"), "gr-small gr-primary");
+      element("span", "", bonus, t("bonusesPitch"));
+      for (const b of BONUSES) {
+        button(bonus, "bonus", t(bonusText(b.id).play), "gr-small gr-primary").setAttribute("data-world", b.id);
+      }
       const cloudity = element("div", "gr-rule gr-rule--info gr-roll-cta", body);
       element("span", "", cloudity, t("rollCta"));
       contactLink(cloudity);
@@ -751,16 +805,20 @@ export function createHud(t, options) {
       });
     },
 
-    /** The map of the worlds. progress: the progress store. bonus: { open, best, hasSave } for the bonus table. */
-    map(progress, onReset, bonus) {
+    /**
+     * The map of the worlds. progress: the progress store. bonuses: [{ id, open,
+     * best, hasSave }], one per bonus. install: the home screen offer, or null.
+     */
+    map(progress, onReset, bonuses, install) {
       screen(
         "map",
         t("mapTitle"),
         (body, footer) => {
           // A world added after a player finished the game is not done yet
           const allDone = progress.finished && progress.world(WORLDS[WORLDS.length - 1].id).stars > 0;
-          element("p", "gr-muted gr-map-hint", body, allDone ? t("allDone") : t("mapHint"));
+          element("p", "gr-muted gr-map-hint", body, allDone ? t("allDone") : t(options.hostSave ? "mapHintVscode" : "mapHint"));
           modeSwitch(body, progress.mode);
+          installBox(body, install || null, "gr-install--map");
           const grid = element("ol", "gr-map", body);
           let focus = null;
           for (const world of WORLDS) {
@@ -790,11 +848,13 @@ export function createHud(t, options) {
               element("span", "gr-lock", foot, t("locked"));
             }
           }
-          // The bonus table, once every world is done: nothing shows it before
-          if (bonus && bonus.open) {
-            const play = bonusCard(body, bonus);
-            if (!focus) {
-              focus = play;
+          // The bonuses, once every world is done: nothing shows them before
+          for (const bonus of bonuses || []) {
+            if (bonus.open) {
+              const play = bonusCard(body, bonus);
+              if (!focus) {
+                focus = play;
+              }
             }
           }
           const meta = element("div", "gr-map-meta", body);
@@ -856,13 +916,14 @@ export function createHud(t, options) {
       });
     },
 
-    /** The card of the bonus table before it starts. view: { title, story, how, best, hasSave }. */
+    /** The card of a bonus before it starts. view: { id, story, how, best, hasSave }. */
     bonusIntro(view) {
-      worldPads = ["flippers"];
-      screen("intro", t("bonusName"), (body, footer) => {
+      const words = bonusText(view.id);
+      worldPads = view.id === "orgman" ? ["maze"] : ["flippers"];
+      screen("intro", t(words.name), (body, footer) => {
         element("div", "gr-logo gr-logo--happy", body).innerHTML = GUINEA_ART;
         element("p", "", body, view.story);
-        element("p", "gr-mode-line", body, t("bonusOneDifficulty"));
+        element("p", "gr-mode-line", body, t(words.one));
         if (view.how && view.how.length) {
           element("p", "gr-small-title", body, t("howToPlay"));
           const steps = element("ol", "gr-how", body);
@@ -870,11 +931,14 @@ export function createHud(t, options) {
         }
         const rule = element("div", "gr-rule", body);
         element("strong", "", rule, t("theRule"));
-        element("span", "", rule, t("bonusRule"));
+        element("span", "", rule, t(words.rule));
+        if (view.id === "orgman") {
+          keysHelp(body);
+        }
         if (view.best > 0) {
           element("p", "gr-muted", body, t("best") + ": " + number(view.best));
         }
-        button(body, "hof", t("hofSeeBonus"), "gr-small gr-hof-open").setAttribute("data-world", "pinball");
+        button(body, "hof", t(words.see), "gr-small gr-hof-open").setAttribute("data-world", view.id);
         button(footer, "map", t("backToMap"));
         if (view.hasSave) {
           button(footer, "bonus-new", t("bonusNew"));
@@ -885,35 +949,58 @@ export function createHud(t, options) {
       });
     },
 
-    /** The end of a pinball game: result = { score, best, newBest, level, missions, notes, ms }. */
+    /** The end of a game of a bonus: result = { id, score, best, newBest, level, ms, and missions, notes (pinball) or admins (orgman) }. */
     bonusResult(result) {
+      const words = bonusText(result.id);
       screen("done", t("bonusOverTitle"), (body, footer) => {
         element("div", "gr-logo gr-logo--happy", body).innerHTML = GUINEA_ART;
         element("p", "gr-score", body, t("score") + ": " + number(result.score));
         element("p", "gr-muted", body, result.newBest ? t("newBest") : t("best") + ": " + number(result.best));
         const list = element("ul", "gr-bonuses", body);
-        element("li", "", list, t("bonusLevelLine", { n: result.level, m: result.missions, min: Math.max(1, Math.round(result.ms / 60000)) }));
+        const minutes = Math.max(1, Math.round(result.ms / 60000));
+        if (result.id === "orgman") {
+          element("li", "", list, t("orgLevelLine", { n: result.level, a: result.admins || 0, min: minutes }));
+        } else {
+          element("li", "", list, t("bonusLevelLine", { n: result.level, m: result.missions, min: minutes }));
+        }
         if (result.notes > 0) {
           element("li", "", list, t("bonusNotesLine", { n: result.notes }));
         }
         invitePlace(body);
         const rule = element("div", "gr-rule", body);
         element("strong", "", rule, t("theRule"));
-        element("span", "", rule, t("bonusRule"));
-        button(body, "hof", t("hofSeeBonus"), "gr-small gr-hof-open").setAttribute("data-world", "pinball");
+        element("span", "", rule, t(words.rule));
+        button(body, "hof", t(words.see), "gr-small gr-hof-open").setAttribute("data-world", result.id);
         button(footer, "map", t("backToMap"));
         button(footer, "bonus-new", t("replay"), "gr-primary");
       });
     },
 
-    /** One more thing: the bonus table is open. fromCredits: shown at the end of the credits, else on the map. */
-    teaser(fromCredits) {
+    /**
+     * One more thing: bonuses are open. fromCredits: shown at the end of the
+     * credits, else on the map. ids: the bonuses never shown before.
+     */
+    teaser(fromCredits, ids) {
+      const list = ids && ids.length ? ids : ["pinball"];
       screen("credits", t("teaserTitle"), (body, footer) => {
         element("div", "gr-logo gr-logo--happy", body).innerHTML = GUINEA_ART;
-        element("p", "gr-teaser", body, t("teaserBody"));
-        element("p", "gr-muted", body, t("bonusPitch"));
+        element("p", "gr-teaser", body, t(list.length > 1 ? "teaserBothBody" : list[0] === "orgman" ? "teaserOrgBody" : "teaserBody"));
+        for (const id of list) {
+          element("p", "gr-muted", body, t(bonusText(id).pitch));
+        }
         button(footer, fromCredits ? "credits-card" : "map", t("teaserLater"));
-        button(footer, "bonus", t("teaserPlay"), "gr-primary");
+        list.forEach((id, i) => {
+          button(footer, "bonus", t(bonusText(id).play), i === list.length - 1 ? "gr-primary" : "").setAttribute("data-world", id);
+        });
+      });
+    },
+
+    /** The shared save of VS Code was edited by hand: everything starts again from zero. */
+    saveRefused() {
+      screen("credits", t("saveRefusedTitle"), (body, footer) => {
+        element("div", "gr-logo gr-logo--sad", body).innerHTML = GUINEA_ART;
+        element("p", "gr-teaser", body, t("saveRefusedBody"));
+        button(footer, "map", t("saveRefusedOk"), "gr-primary");
       });
     },
 
@@ -962,6 +1049,19 @@ export function createHud(t, options) {
       }
     },
 
+    /** True while the map or an end card shows the install box. */
+    hasInstallBox() {
+      return !panel.hidden && Boolean(panel.querySelector(".gr-install"));
+    },
+
+    /** The install offer changed (the browser offered it late, the box was answered, the game got installed). */
+    refreshInstall(install) {
+      const box = panel.querySelector(".gr-install");
+      if (box) {
+        fillInstall(box, install);
+      }
+    },
+
     /** The mark on the Hall of Fame button of the map: a top 5 score waits to be sent. */
     markHof(on) {
       hofMarked = Boolean(on);
@@ -993,6 +1093,9 @@ export function createHud(t, options) {
             element("span", "", missed, result.missed);
           }
           invitePlace(body);
+          if (result.install) {
+            installBox(body, result.install);
+          }
           const rule = element("div", "gr-rule", body);
           element("strong", "", rule, t("theRule"));
           element("span", "", rule, t("w" + world.id + "_rule"));
@@ -1024,15 +1127,16 @@ export function createHud(t, options) {
         (body, footer) => {
           const tabs = element("div", "gr-hof-tabs gr-scroll", body);
           tabs.setAttribute("role", "tablist");
-          for (const tab of ["all"].concat(WORLDS.map((w) => w.id), ["pinball"])) {
-            const label = tab === "all" ? t("hofGeneral") : tab === "pinball" ? t("bonusName") : t("w" + tab + "_name");
-            const short = tab === "all" ? t("hofAllTab") : tab === "pinball" ? t("hofPinballTab") : String(tab);
+          for (const tab of ["all"].concat(WORLDS.map((w) => w.id), BONUSES.map((b) => b.id))) {
+            const bonus = BONUS_TEXT[tab];
+            const label = tab === "all" ? t("hofGeneral") : bonus ? t(bonus.name) : t("w" + tab + "_name");
+            const short = tab === "all" ? t("hofAllTab") : bonus ? t(bonus.tab) : String(tab);
             const node = button(tabs, "hof-tab", label, "gr-small" + (tab === view.tab ? " is-active" : ""), short);
             node.setAttribute("data-tab", String(tab));
             node.setAttribute("role", "tab");
             node.setAttribute("aria-selected", String(tab === view.tab));
           }
-          element("p", "gr-small-title", body, view.tab === "all" ? t("hofGeneralTitle") : view.tab === "pinball" ? t("hofPinballTitle") : t("world", { n: view.tab }) + " · " + t("w" + view.tab + "_name"));
+          element("p", "gr-small-title", body, view.tab === "all" ? t("hofGeneralTitle") : BONUS_TEXT[view.tab] ? t(BONUS_TEXT[view.tab].title) : t("world", { n: view.tab }) + " · " + t("w" + view.tab + "_name"));
           if (view.loading) {
             element("p", "gr-muted", body, t("hofLoading"));
           } else {
@@ -1261,7 +1365,8 @@ export function createHud(t, options) {
 
     /**
      * A message from the cast, as a Lightning chat bubble. Two at most on
-     * screen: a third one waits until the oldest has been read.
+     * screen: a third one waits until the oldest has been read. who: a name
+     * of the cast, or { name, faceUrl, color } for someone outside it.
      */
     chat(who, text, ms) {
       const life = chatLife(text, ms);

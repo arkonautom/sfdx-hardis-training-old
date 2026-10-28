@@ -448,6 +448,24 @@ html.guinea-run-open body {
   color: #444444;
 }
 
+.guinea-run .gr-install-link {
+  align-self: flex-start;
+  margin-top: 8px;
+  text-decoration: none;
+}
+
+.guinea-run .gr-install[hidden],
+.guinea-run .gr-install-link[hidden] {
+  display: none;
+}
+
+/* On the map, under the modes: the offer stays in sight without pushing the worlds far down */
+.guinea-run .gr-install--map {
+  margin: 0 0 12px;
+  padding: 8px 12px;
+  font-size: 14px;
+}
+
 .guinea-run .gr-star-goals {
   display: flex;
   flex-wrap: wrap;
@@ -756,6 +774,16 @@ html.guinea-run-open body {
 
 .guinea-run .gr-avatar--romain {
   background-image: url("../../images/romain.svg");
+}
+
+/* Someone outside the cast with a portrait (a pinball admin) */
+.guinea-run .gr-avatar--portrait {
+  flex-basis: 38px;
+  width: 38px;
+  height: 38px;
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
 }
 
 /* Victor's note */

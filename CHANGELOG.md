@@ -3,6 +3,35 @@
 What changed in the course, for learners and trainers. The course has no versions: each section is
 a day, newest first, and a change goes under the date of the day it is made.
 
+## 2026-10-27
+
+- Guinea Run: in VS Code, your progress follows you in every project, and a save edited by hand sends the guinea pig back to the first world.
+- Lab 2.6: the `no Layout named ...` troubleshooting entry names `FlowRecord-Flow Layout` as a layout to delete from the Profile.
+- Lab 2.8: a troubleshooting entry says a red check on the Profile of the over-wide Pull Request is cleared by the reset, nothing to fix by hand.
+
+## 2026-10-26
+
+- Pipeline Pinball: a ball no longer gets stuck in a hole during multiball, Rollback now works and lights both outlanes, a ball below the Production floor waits until it is back in view, the admins show their faces, and the score display is easier to read.
+- Guinea Run: on a phone, the map now offers to add the game to the home screen, and the offer stays until the game is really installed.
+- Lab 2.7: step 1 builds the flat roof decision and its assignment click by click, with the names the pictures show, and both flow saves use **Save As New Version**.
+- Lab 2.7 and Lab 2.1: the teammate step names the **Open the Pull Request** button at the bottom of the panel.
+- Lab 2.6: step 3 says how to open the Pipeline Settings panel, and the settings are named by their panel labels, **Minimize Profiles** and **Auto-Remove User Permissions on profiles**, next to their keys in the configuration file.
+- Lab 2.4: says to pull the MegaLinter commit that adds the last line of `export.json` before pushing the deployment actions, with a troubleshooting entry for a refused push.
+- Guinea Run: once opened online, the game plays offline, and on a phone it can be added to the home screen; progress is no longer lost when the game is open in two tabs or two VS Code windows.
+- Guinea Run: Pipeline Pinball runs at the same speed in Easy, Normal and Hard, since its points do not depend on the mode.
+- Lab 1.2: **Set up my training environment** asks which GitHub account to fork into when this computer was already signed in to GitHub, and can switch to another one.
+- Home page and Lab 1.1: keep the same editor (VS Code, Agentforce Vibes or Cursor) from start to finish, since the scratch orgs are connected only in the editor that created them.
+- Lab 2.7: taking both sides of the permission set conflict gives two complete blocks with nothing to type, and the merge editor pictures show the real Helios file.
+- Lab 2.4: **Create my lab records** says when `External_Id__c` is not marked External Id or a field cannot be edited, instead of blaming the profile.
+- Lab 3.10: troubleshooting for a cherry-pick of US-059 that conflicts on one file only.
+- Labs 2.7 and 3.10: check that the SF Merge Driver is off before you start, since it solves the conflicts these labs teach.
+- Lab 3.11: how to stop the nightly crew capacity email in the orgs you keep.
+- Guinea Run has a second bonus, Org-Man: a maze where four admins chase the guinea pig, deployment rockets that turn them blue, faster mazes as you go, and its own Hall of Fame board. It opens with Pipeline Pinball, once the ten worlds are done.
+
+## 2026-10-24
+
+- Guinea Run no longer invites you to send your scores again a few minutes after a send, which the Hall of Fame refused as unverified. The game says when you can send again, and a send that comes too soon gets an answer that says so.
+
 ## 2026-10-23
 
 - Guinea Run invites you to send your scores as soon as one would enter the top 5 of a world, of the overall total or of Pipeline Pinball.
